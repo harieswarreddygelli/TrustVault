@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+
+    <title>My Documents | TrustVault</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/trustvault.css') }}">
+    <script src="{{ url_for('static', filename='js/theme.js') }}" defer></script>
+</head>
+<body>
+    <header class="site-header">
+        <a class="brand-lockup" href="{{ url_for('documents.dashboard') }}">
+            <span class="brand-mark" aria-hidden="true">T</span>
+            <span>TrustVault</span>
+        </a>
+
+        <nav class="site-nav" aria-label="Main navigation">
+            <a href="{{ url_for('documents.dashboard') }}">Dashboard</a>
+            <a class="active" href="{{ url_for('documents.index') }}" aria-current="page">My Documents</a>
+            <a href="{{ url_for('documents.upload_page') }}">Upload</a>
+            <a href="{{ url_for('documents.shared_documents') }}">Shared Documents</a>
+            <a href="{{ url_for('documents.activity') }}">Activity</a>
+            <a href="{{ url_for('auth.profile') }}">Profile</a>
+        </nav>
+
+        <div class="header-actions">
+            <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Toggle color theme">◐</button>
+
+            <form method="post" action="{{ url_for('auth.logout') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="button-secondary">Sign out</button>
+            </form>
+        </div>
+    </header>
+
+    <main class="documents-page">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <section class="flash-messages" aria-label="Notifications">
+                    {% for category, message in messages %}
+                        <p class="flash-message {{ category }}" role="status">{{ message }}</p>
+                    {% endfor %}
+                </section>
+            {% endif %}
+        {% endwith %}
+
+        <section class="page-heading">
+            <div>
+                <p class="eyebrow">DOCUMENT WORKSPACE</p>
+                <h1>Document Library</h1>
+                <p>Manage your private documents and files shared with you.</p>
+            </div>
+            <div class="header-actions">
+                <span class="document-count">{{ documents|length }} item(s)</span>
+                {% if current_user.role != 'viewer' %}
+                    <a class="button-primary" href="{{ url_for('documents.upload_page') }}">＋ Upload</a>
+                {% endif %}
+            </div>
+        </section>
+
+        <section class="documents-section">
+            <!-- Search & Filter Panel -->
+            <form method="get" action="{{ url_for('documents.index') }}" class="panel document-filters">
+                <h2>Search &amp; Filter</h2>
+
+                <div class="filter-grid">
+                    <div class="field-group">
+                        <label for="q">Document Name</label>
+                        <input
+                            id="q"
+                            name="q"
+                            type="search"
+                            maxlength="200"
+                            value="{{ search_query }}"
+                            placeholder="Title or filename..."
+                        >
+                    </div>
+
+                    <div class="field-group">
+                        <label for="owner">Owner</label>
+                        <input
+                            id="owner"
+                            name="owner"
+                            type="search"
+                            maxlength="80"
+                            value="{{ owner_query }}"
+                            placeholder="Owner username..."
+                        >
+                    </div>
+
+                    <div class="field-group">
+                        <label for="category">Category</label>
+                        <select id="category" name="category">
+                            <option value="">All categories</option>
+                            {% for cat in categories %}
+                                <option
+                                    value="{{ cat }}"
+                                    {% if selected_category == cat %}selected{% endif %}
+                                >
+                                    {{ cat }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="field-group">
+                        <label for="date">Exact Upload Date</label>
+                        <input
+                            id="date"
+                            name="date"
+                            type="date"
+                            value="{{ exact_date }}"
+                        >
+                    </div>
+
+                    <div class="field-group">
+                        <label for="uploaded_after">From Date</label>
+                        <input
+                            id="uploaded_after"
+                            name="uploaded_after"
+                            type="date"
+                            value="{{ uploaded_after }}"
+                        >
+                    </div>
+
+                    <div class="field-group">
+                        <label for="uploaded_before">Until Date</label>
+                        <input
+                            id="uploaded_before"
+                            name="uploaded_before"
+                            type="date"
+                            value="{{ uploaded_before }}"
+                        >
+                    </div>
+                </div>
+
+                <div class="header-actions">
+                    <button type="submit" class="button-primary">Search</button>
+                    <a class="button-secondary" href="{{ url_for('documents.index') }}">Reset</a>
+                    <span class="muted" style="margin-left: auto; font-size: 0.88rem;">
+                        Showing {{ documents|length }} of {{ total_documents }} authorized document(s)
+                    </span>
+                </div>
+            </form>
+
+            {% if documents %}
+                <!-- Hidden Bulk Action Form linked to checkboxes via form="bulk-actions-form" -->
+                <form id="bulk-actions-form" method="post" action="{{ url_for('documents.bulk_share') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                </form>
+
+                <!-- Clean Collapsible Bulk Actions Toolbar -->
+                <details class="panel document-filters" style="margin-bottom: 18px; padding: 14px 20px;">
+                    <summary style="cursor: pointer; font-weight: 700; color: var(--primary); display: flex; align-items: center; justify-content: space-between;">
+                        <span>Bulk Actions — Share or Delete Multiple Selected Documents</span>
+                        <span class="muted" style="font-size: 0.82rem; font-weight: 500;">Click to expand</span>
+                    </summary>
+
+                    <div style="margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border);">
+                        <div style="margin-bottom: 12px;">
+                            <label style="display: inline-flex; align-items: center; gap: 8px; cursor: pointer; margin: 0;">
+                                <input type="checkbox" id="select-all-owned" style="width: 18px; height: 18px; min-height: auto;">
+                                <span>Select all owned documents in list</span>
+                            </label>
+                        </div>
+
+                        <div class="filter-grid" style="align-items: end;">
+                            <div class="field-group">
+                                <label for="bulk-username">Recipient Username(s)</label>
+                                <input id="bulk-username"
+                                       form="bulk-actions-form"
+                                       type="text"
+                                       name="username"
+                                       placeholder="Type username(s) e.g. bob, charlie_viewer">
+                                {% if shareable_users %}
+                                    <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px;">
+                                        {% for u in shareable_users %}
+                                            <label style="display: inline-flex; align-items: center; gap: 5px; font-weight: 500; font-size: 0.84rem; margin: 0; cursor: pointer;">
+                                                <input type="checkbox"
+                                                       form="bulk-actions-form"
+                                                       name="usernames"
+                                                       value="{{ u.username }}"
+                                                       style="width: 16px; height: 16px; min-height: auto;">
+                                                <span>{{ u.username }} ({{ u.role }})</span>
+                                            </label>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="field-group">
+                                <label for="bulk-permission">Permission Level</label>
+                                <select id="bulk-permission" name="permission" form="bulk-actions-form">
+                                    <option value="read">Read (View &amp; Download)</option>
+                                    <option value="write">Edit / Write (View, Download &amp; Modify)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="header-actions" style="margin-top: 12px;">
+                            <button type="submit"
+                                    form="bulk-actions-form"
+                                    formaction="{{ url_for('documents.bulk_share') }}"
+                                    class="button-primary">
+                                Share Selected Documents
+                            </button>
+                            <button type="submit"
+                                    form="bulk-actions-form"
+                                    formaction="{{ url_for('documents.bulk_delete') }}"
+                                    class="button-danger"
+                                    onclick="return confirm('Delete all selected documents? Access will be revoked immediately.');">
+                                Delete Selected Documents
+                            </button>
+                        </div>
+                    </div>
+                </details>
+
+                <!-- Document Cards List -->
+                <div class="document-list">
+                    {% for document in documents %}
+                        {% set is_owner = document.owner_id|string == current_user.get_id() %}
+                        {% set ns = namespace(can_write=is_owner) %}
+                        {% if not is_owner %}
+                            {% for perm in document.permissions %}
+                                {% if perm.user_id|string == current_user.get_id() and not perm.is_revoked and perm.permission in ['write', 'edit', 'owner'] %}
+                                    {% set ns.can_write = true %}
+                                {% endif %}
+                            {% endfor %}
+                        {% endif %}
+
+                        <article class="panel document-card">
+                            <div class="document-card-main">
+                                {% if is_owner %}
+                                    <div style="display: flex; align-items: center;">
+                                        <input type="checkbox"
+                                               class="owned-doc-checkbox"
+                                               form="bulk-actions-form"
+                                               name="document_ids"
+                                               value="{{ document.id }}"
+                                               aria-label="Select {{ document.title }}"
+                                               style="width: 19px; height: 19px; min-height: auto; cursor: pointer;">
+                                    </div>
+                                {% endif %}
+
+                                <div class="document-icon" aria-hidden="true">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                        <path d="M14 2v6h6M8 13h8M8 17h8"/>
+                                    </svg>
+                                </div>
+
+                                <div class="document-info">
+                                    <h3>{{ document.title }}</h3>
+                                    <p class="muted document-filename">
+                                        {{ document.original_filename }}
+                                        · Category: <strong>{{ document.category or "General" }}</strong>
+                                        · Owner: <strong>{{ document.owner.username if document.owner else "Unknown" }}</strong>
+                                    </p>
+                                    <p class="muted document-date">
+                                        Uploaded: {{ document.created_at.strftime('%d %b %Y, %H:%M') if document.created_at and document.created_at is not string else (document.created_at or "Unknown") }}
+                                    </p>
+                                    <span class="document-owner-label">
+                                        {{ "Owned by you" if is_owner else ("Shared with you · Edit Access" if ns.can_write else "Shared with you · Read Only") }}
+                                    </span>
+                                </div>
+
+                                <div class="document-actions">
+                                    <a class="document-action-link" href="{{ url_for('documents.download', document_id=document.id) }}">
+                                        Download
+                                    </a>
+
+                                    {% if ns.can_write %}
+                                        <a class="button-primary" href="{{ url_for('documents.edit', document_id=document.id) }}">
+                                            Edit
+                                        </a>
+                                    {% endif %}
+
+                                    {% if is_owner or current_user.role == 'admin' %}
+                                        <a class="document-action-link" href="{{ url_for('documents.history', document_id=document.id) }}">
+                                            History
+                                        </a>
+                                    {% endif %}
+
+                                    {% if is_owner %}
+                                        <form method="post"
+                                              action="{{ url_for('documents.delete_document', document_id=document.id) }}"
+                                              onsubmit="return confirm('Delete this document? Access will be revoked and the stored file will be removed.');">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <button class="document-delete-button" type="submit">Delete</button>
+                                        </form>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <details class="document-details">
+                                <summary>Sharing &amp; permissions</summary>
+
+                                {% if is_owner %}
+                                    <h4>Grant access to one or multiple users</h4>
+
+                                    <form method="post"
+                                          action="{{ url_for('documents.share', document_id=document.id) }}"
+                                          class="sharing-form">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                                        <div class="field-group">
+                                            <label for="username-{{ document.id }}">Recipient username(s)</label>
+                                            <input id="username-{{ document.id }}"
+                                                   type="text"
+                                                   name="username"
+                                                   placeholder="e.g. bob, charlie_viewer">
+                                            {% if shareable_users %}
+                                                <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px;">
+                                                    {% for u in shareable_users %}
+                                                        <label style="display: inline-flex; align-items: center; gap: 4px; font-weight: 500; font-size: 0.82rem; margin: 0; cursor: pointer;">
+                                                            <input type="checkbox"
+                                                                   name="usernames"
+                                                                   value="{{ u.username }}"
+                                                                   style="width: 15px; height: 15px; min-height: auto;">
+                                                            <span>{{ u.username }}</span>
+                                                        </label>
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+
+                                        <div class="field-group">
+                                            <label for="permission-{{ document.id }}">Permission level</label>
+                                            <select id="permission-{{ document.id }}" name="permission" required>
+                                                <option value="read">Read</option>
+                                                <option value="write">Edit / Write</option>
+                                            </select>
+                                        </div>
+
+                                        <button type="submit" class="button-primary">Share</button>
+                                    </form>
+
+                                    <h4>Current and previous permissions</h4>
+
+                                    {% if document.permissions %}
+                                        <ul class="permission-list">
+                                            {% for permission in document.permissions %}
+                                                <li class="permission-item">
+                                                    <div>
+                                                        <strong>
+                                                            {{ permission.user.username if permission.user else permission.user_id }}
+                                                        </strong>
+                                                        <span class="muted">— {{ "Edit / Write" if permission.permission in ['write', 'edit'] else permission.permission|title }}</span>
+
+                                                        {% if permission.is_revoked %}
+                                                            <p class="muted">Revoked: {{ permission.revoked_at or "Date unavailable" }}</p>
+                                                        {% else %}
+                                                            <p><span class="status-badge status-active">Active permission</span></p>
+                                                        {% endif %}
+                                                    </div>
+
+                                                    {% if not permission.is_revoked %}
+                                                        <form method="post"
+                                                              action="{{ url_for('documents.revoke', document_id=document.id, user_id=permission.user_id) }}"
+                                                              onsubmit="return confirm('Revoke this user’s access?');">
+                                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                            <button type="submit" class="button-danger">Revoke access</button>
+                                                        </form>
+                                                    {% endif %}
+                                                </li>
+                                            {% endfor %}
+                                        </ul>
+                                    {% else %}
+                                        <p class="muted">This document has not been shared yet.</p>
+                                    {% endif %}
+                                {% else %}
+                                    <p class="muted">
+                                        Shared with you by <strong>{{ document.owner.username if document.owner else "another user" }}</strong>.
+                                        {% if ns.can_write %}
+                                            You have active <strong>Edit / Write</strong> permission.
+                                        {% else %}
+                                            You have <strong>Read-Only</strong> permission.
+                                        {% endif %}
+                                    </p>
+                                {% endif %}
+                            </details>
+                        </article>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <section class="panel empty-state">
+                    <div class="empty-state-icon" aria-hidden="true">▤</div>
+                    {% if filters_active %}
+                        <h2>No matching documents</h2>
+                        <p>Try changing your search or filter criteria.</p>
+                        <a class="button-secondary" href="{{ url_for('documents.index') }}">Clear filters</a>
+                    {% else %}
+                        <h2>Your document library is empty</h2>
+                        <p>Upload your first document to begin storing and sharing files securely.</p>
+                        {% if current_user.role != 'viewer' %}
+                            <a class="button-primary" href="{{ url_for('documents.upload_page') }}">Upload a document</a>
+                        {% endif %}
+                    {% endif %}
+                </section>
+            {% endif %}
+        </section>
+
+        <footer class="documents-footer">
+            <a href="{{ url_for('documents.dashboard') }}">← Back to dashboard</a>
+            <span>TrustVault · Secure document workspace</span>
+        </footer>
+    </main>
+
+    <script>
+    (() => {
+        const selectAll = document.getElementById("select-all-owned");
+        if (!selectAll) return;
+        selectAll.addEventListener("change", () => {
+            document.querySelectorAll(".owned-doc-checkbox").forEach((cb) => {
+                cb.checked = selectAll.checked;
+            });
+        });
+    })();
+    </script>
+</body>
+</html>

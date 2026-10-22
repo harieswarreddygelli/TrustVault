@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+
+    <title>{% block title %}TrustVault{% endblock %}</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/trustvault.css') }}">
+    <script src="{{ url_for('static', filename='js/theme.js') }}" defer></script>
+
+    {% block head %}{% endblock %}
+</head>
+<body>
+    {% if current_user.is_authenticated %}
+    <header class="site-header">
+        <a class="brand-lockup" href="{{ url_for('documents.dashboard') }}">
+            <span class="brand-mark" aria-hidden="true">T</span>
+            <span>TrustVault</span>
+        </a>
+
+        <nav class="site-nav" aria-label="Main navigation">
+            <a href="{{ url_for('documents.dashboard') }}">Dashboard</a>
+            <a href="{{ url_for('documents.index') }}">My Documents</a>
+            <a href="{{ url_for('documents.upload_page') }}">Upload</a>
+            <a href="{{ url_for('documents.shared_documents') }}">Shared Documents</a>
+            <a href="{{ url_for('documents.activity') }}">Activity</a>
+            <a href="{{ url_for('auth.profile') }}">Profile</a>
+        </nav>
+
+        <div class="header-actions">
+            <button type="button" id="theme-toggle" class="theme-toggle" aria-label="Toggle color theme">◐</button>
+
+            <form method="post" action="{{ url_for('auth.logout') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="button-secondary">Sign out</button>
+            </form>
+        </div>
+    </header>
+    {% endif %}
+
+    <main class="documents-page">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <section class="flash-messages" aria-live="polite">
+                {% for category, message in messages %}
+                <p class="flash-message {{ category }}" role="status">{{ message }}</p>
+                {% endfor %}
+            </section>
+            {% endif %}
+        {% endwith %}
+
+        {% block page_content %}{% endblock %}
+    </main>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

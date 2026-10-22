@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+
+    <title>Shared Documents | TrustVault</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/trustvault.css') }}">
+    <script src="{{ url_for('static', filename='js/theme.js') }}" defer></script>
+</head>
+<body>
+    <header class="site-header">
+        <a class="brand-lockup" href="{{ url_for('documents.dashboard') }}">
+            <span class="brand-mark" aria-hidden="true">T</span>
+            <span>TrustVault</span>
+        </a>
+
+        <nav class="site-nav" aria-label="Main navigation">
+            <a href="{{ url_for('documents.dashboard') }}">Dashboard</a>
+            <a href="{{ url_for('documents.index') }}">My Documents</a>
+            <a href="{{ url_for('documents.upload_page') }}">Upload</a>
+            <a class="active" href="{{ url_for('documents.shared_documents') }}" aria-current="page">Shared Documents</a>
+            <a href="{{ url_for('documents.activity') }}">Activity</a>
+            <a href="{{ url_for('auth.profile') }}">Profile</a>
+        </nav>
+
+        <div class="header-actions">
+            <button type="button" id="theme-toggle" class="theme-toggle" aria-label="Toggle color theme">◐</button>
+
+            <form method="POST" action="{{ url_for('auth.logout') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="button-secondary">Sign out</button>
+            </form>
+        </div>
+    </header>
+
+    <main class="documents-page">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <section class="flash-messages" aria-label="Notifications">
+                    {% for category, message in messages %}
+                        <p class="flash-message {{ category }}" role="status">{{ message }}</p>
+                    {% endfor %}
+                </section>
+            {% endif %}
+        {% endwith %}
+
+        <section class="page-heading">
+            <div>
+                <p class="eyebrow">COLLABORATION</p>
+                <h1>Shared Documents</h1>
+                <p>Documents other TrustVault users have shared with you.</p>
+            </div>
+            <span class="document-count">{{ documents|length if documents else 0 }} shared</span>
+        </section>
+
+        <section class="document-list">
+            {% if documents %}
+                {% for document in documents %}
+                    {% set ns = namespace(can_write=false) %}
+                    {% for perm in document.permissions %}
+                        {% if perm.user_id|string == current_user.get_id() and not perm.is_revoked and perm.permission in ['write', 'edit', 'owner'] %}
+                            {% set ns.can_write = true %}
+                        {% endif %}
+                    {% endfor %}
+
+                    <article class="document-card">
+                        <div class="document-card-content">
+                            <div class="document-icon" aria-hidden="true">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                    <path d="M14 2v6h6M8 13h8M8 17h8"/>
+                                </svg>
+                            </div>
+
+                            <div class="document-details">
+                                <h2>{{ document.title or document.original_filename }}</h2>
+                                <p>
+                                    File: {{ document.original_filename }}
+                                    · Category: <strong>{{ document.category or "General" }}</strong>
+                                    · Owner: <strong>{{ document.owner.username if document.owner else "Unknown" }}</strong>
+                                </p>
+                                <p>
+                                    Access Level:
+                                    <strong>{{ "Edit / Write" if ns.can_write else "Read-Only" }}</strong>
+                                    · Uploaded: {{ document.created_at.strftime('%d %b %Y') if document.created_at and document.created_at is not string else (document.created_at or 'Date unavailable') }}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="document-actions">
+                            {% if ns.can_write %}
+                                <a class="button-primary" href="{{ url_for('documents.edit', document_id=document.id) }}">
+                                    Edit Document
+                                </a>
+                            {% endif %}
+                            <a class="button-secondary" href="{{ url_for('documents.download', document_id=document.id) }}">
+                                Download
+                            </a>
+                        </div>
+                    </article>
+                {% endfor %}
+            {% else %}
+                <div class="empty-state">
+                    <div class="empty-state-icon" aria-hidden="true">↗</div>
+                    <h2>No shared documents yet</h2>
+                    <p>Documents other users share with you will appear here when you have active read or write access.</p>
+                    <a class="button-primary" href="{{ url_for('documents.index') }}">Browse My Documents</a>
+                </div>
+            {% endif %}
+        </section>
+    </main>
+</body>
+</html>

@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+
+    <title>Edit {{ document.title }} | TrustVault</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/trustvault.css') }}">
+    <script src="{{ url_for('static', filename='js/theme.js') }}" defer></script>
+</head>
+<body>
+    <header class="site-header">
+        <a class="brand-lockup" href="{{ url_for('documents.dashboard') }}">
+            <span class="brand-mark" aria-hidden="true">T</span>
+            <span>TrustVault</span>
+        </a>
+
+        <nav class="site-nav" aria-label="Main navigation">
+            <a href="{{ url_for('documents.dashboard') }}">Dashboard</a>
+            <a class="active" href="{{ url_for('documents.index') }}">My Documents</a>
+            <a href="{{ url_for('documents.upload_page') }}">Upload</a>
+            <a href="{{ url_for('documents.shared_documents') }}">Shared Documents</a>
+            <a href="{{ url_for('documents.activity') }}">Activity</a>
+            <a href="{{ url_for('auth.profile') }}">Profile</a>
+        </nav>
+
+        <div class="header-actions">
+            <button type="button" id="theme-toggle" class="theme-toggle" aria-label="Toggle color theme">◐</button>
+
+            <form method="post" action="{{ url_for('auth.logout') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="button-secondary">Sign out</button>
+            </form>
+        </div>
+    </header>
+
+    <main class="documents-page">
+        <section class="page-heading">
+            <div>
+                <p class="eyebrow">DOCUMENT EDITOR &amp; VERSION UPDATE</p>
+                <h1>Edit: {{ document.title }}</h1>
+                <p>
+                    File: <strong>{{ document.original_filename }}</strong>
+                    · Category: <strong>{{ document.category or "General" }}</strong>
+                    · Owner: <strong>{{ document.owner.username if document.owner else "Unknown" }}</strong>
+                </p>
+            </div>
+            <div class="header-actions">
+                {% if not file_missing %}
+                    <a class="button-secondary" href="{{ url_for('documents.download', document_id=document.id) }}">Download File</a>
+                {% endif %}
+                <a class="button-secondary" href="{{ url_for('documents.index') }}">← Back to Documents</a>
+            </div>
+        </section>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <section class="flash-messages" aria-live="polite">
+                    {% for category, message in messages %}
+                        <p class="flash-message {{ category }}" role="alert" data-category="{{ category }}">
+                            {{ message }}
+                        </p>
+                    {% endfor %}
+                </section>
+            {% endif %}
+        {% endwith %}
+
+        {% if file_missing %}
+            <section class="flash-messages">
+                <p class="flash-message warning" role="alert">
+                    Note: This document's database record exists from an earlier folder, so its local file bytes are currently empty. You can type new content below or upload a replacement file to restore it!
+                </p>
+            </section>
+        {% endif %}
+
+        <section class="panel upload-page-card">
+            <form class="upload-form"
+                  method="post"
+                  action="{{ url_for('documents.edit', document_id=document.id) }}"
+                  enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div class="filter-grid">
+                    <div class="upload-field">
+                        <label for="title">Document Title</label>
+                        <input id="title"
+                               name="title"
+                               type="text"
+                               maxlength="255"
+                               value="{{ document.title }}"
+                               required>
+                    </div>
+
+                    <div class="upload-field">
+                        <label for="category">Category</label>
+                        <select id="category" name="category">
+                            {% for cat in categories or ['General', 'Financial', 'Legal', 'Engineering', 'Regulatory', 'HR'] %}
+                                <option value="{{ cat }}" {% if (document.category or 'General') == cat %}selected{% endif %}>
+                                    {{ cat }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="upload-field">
+                    <label for="replacement_file">Upload Replacement / Modified File (Optional — Supports PDF, DOCX, Images, or Text up to 16 MiB)</label>
+                    <input id="replacement_file"
+                           name="replacement_file"
+                           type="file">
+                    <p class="upload-hint">
+                        Select a new file version from your computer to replace the stored file, or edit the text directly below.
+                    </p>
+                </div>
+
+                {% if is_text %}
+                    <div class="upload-field">
+                        <label for="content">Document Text Contents (Max 1 MiB)</label>
+                        <textarea id="content"
+                                  name="content"
+                                  class="code-editor"
+                                  rows="20"
+                                  cols="90">{{ content }}</textarea>
+                    </div>
+                {% else %}
+                    <div class="panel" style="padding: 16px; background: var(--soft);">
+                        <p class="muted">
+                            <strong>Binary Document ({{ document.original_filename }}):</strong>
+                            Use the <strong>Upload Replacement / Modified File</strong> field above to upload a new version, or update the Title and Category above.
+                        </p>
+                    </div>
+                {% endif %}
+
+                <div class="upload-footer">
+                    <p class="upload-security-note">
+                        <span aria-hidden="true">◆</span>
+                        All modifications are verified server-side and recorded in the SHA-256 audit trail
+                    </p>
+                    <div class="header-actions">
+                        <a class="button-secondary" href="{{ url_for('documents.index') }}">Cancel</a>
+                        <button type="submit" class="button-primary">Save Changes →</button>
+                    </div>
+                </div>
+            </form>
+        </section>
+    </main>
+</body>
+</html>

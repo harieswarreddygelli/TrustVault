@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+
+    <title>Dashboard | TrustVault</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/trustvault.css') }}">
+    <script src="{{ url_for('static', filename='js/theme.js') }}" defer></script>
+</head>
+<body>
+    <header class="site-header">
+        <a class="brand-lockup" href="{{ url_for('documents.dashboard') }}">
+            <span class="brand-mark" aria-hidden="true">T</span>
+            <span>TrustVault</span>
+        </a>
+
+        <nav class="site-nav" aria-label="Main navigation">
+            <a class="active" href="{{ url_for('documents.dashboard') }}" aria-current="page">Dashboard</a>
+            <a href="{{ url_for('documents.index') }}">My Documents</a>
+            <a href="{{ url_for('documents.upload_page') }}">Upload</a>
+            <a href="{{ url_for('documents.shared_documents') }}">Shared Documents</a>
+            <a href="{{ url_for('documents.activity') }}">Activity</a>
+            <a href="{{ url_for('auth.profile') }}">Profile</a>
+        </nav>
+
+        <div class="header-actions">
+            <button type="button" id="theme-toggle" class="theme-toggle" aria-label="Toggle color theme">◐</button>
+
+            <form method="post" action="{{ url_for('auth.logout') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="button-secondary">Sign out</button>
+            </form>
+        </div>
+    </header>
+
+    <main class="dashboard-page">
+        <section class="dashboard-welcome">
+            <span class="eyebrow">YOUR SECURE WORKSPACE</span>
+            <h1>Welcome back, {{ current_user.username }}.</h1>
+            <p class="muted">Manage your encrypted documents, permissions, and audit history from one place.</p>
+        </section>
+
+        <section class="dashboard-grid" aria-label="Workspace shortcuts">
+            <a class="panel dashboard-card" href="{{ url_for('documents.index') }}">
+                <span class="dashboard-icon" aria-hidden="true">▤</span>
+                <span class="dashboard-card-label">YOUR FILES</span>
+                <h2>My Documents</h2>
+                <p class="muted">Browse your document library, manage sharing permissions, and review file history.</p>
+                <span class="card-link">Open documents <span aria-hidden="true">→</span></span>
+            </a>
+
+            <a class="panel dashboard-card" href="{{ url_for('documents.upload_page') }}">
+                <span class="dashboard-icon" aria-hidden="true">＋</span>
+                <span class="dashboard-card-label">ADD A FILE</span>
+                <h2>Upload Documents</h2>
+                <p class="muted">Add new files to your private TrustVault workspace with size validation.</p>
+                <span class="card-link">Go to uploads <span aria-hidden="true">→</span></span>
+            </a>
+
+            <a class="panel dashboard-card" href="{{ url_for('auth.profile') }}">
+                <span class="dashboard-icon" aria-hidden="true">♙</span>
+                <span class="dashboard-card-label">YOUR ACCOUNT</span>
+                <h2>My Profile</h2>
+                <p class="muted">Review your account details, security role, and update your password.</p>
+                <span class="card-link">View profile <span aria-hidden="true">→</span></span>
+            </a>
+        </section>
+
+        <section class="dashboard-security panel">
+            <div class="security-symbol" aria-hidden="true">◆</div>
+            <div>
+                <h2>Your documents, your permissions.</h2>
+                <p class="muted">TrustVault enforces strict server-side access checks and cryptographic audit chains on every operation.</p>
+            </div>
+        </section>
+
+        <footer class="dashboard-footer">
+            <span>TrustVault</span>
+            <span>Secure document workspace</span>
+        </footer>
+    </main>
+</body>
+</html>

@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+
+    <title>Create Account | TrustVault</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/trustvault.css') }}">
+    <script src="{{ url_for('static', filename='js/theme.js') }}" defer></script>
+</head>
+<body>
+    <main class="auth-shell">
+        <section class="auth-card">
+            <a class="brand-lockup" href="{{ url_for('auth.login') }}">
+                <span class="brand-mark" aria-hidden="true">T</span>
+                <span class="brand-copy">
+                    <strong>TrustVault</strong>
+                    <small>Private by design</small>
+                </span>
+            </a>
+
+            <div class="auth-heading">
+                <span class="eyebrow">GET STARTED</span>
+                <h1>Create your account.</h1>
+                <p class="muted">Set up your secure document workspace.</p>
+            </div>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="flash-messages" aria-live="polite">
+                        {% for category, message in messages %}
+                            <p class="flash-message {{ category }}" role="alert">{{ message }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+
+            <form method="post" action="{{ url_for('auth.register') }}" class="auth-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div class="form-field">
+                    <label for="username">Username</label>
+                    <input id="username"
+                           name="username"
+                           type="text"
+                           maxlength="80"
+                           autocomplete="username"
+                           placeholder="Choose a username"
+                           value="{{ request.form.get('username', '') }}"
+                           required>
+                </div>
+
+                <div class="form-field">
+                    <label for="email">Email address</label>
+                    <input id="email"
+                           name="email"
+                           type="email"
+                           maxlength="255"
+                           autocomplete="email"
+                           placeholder="you@example.com"
+                           value="{{ request.form.get('email', '') }}"
+                           required>
+                </div>
+
+                <div class="form-field">
+                    <label for="role">Account role</label>
+                    <select id="role" name="role">
+                        <option value="owner" selected>Document Owner (Upload, Share &amp; Manage)</option>
+                        <option value="viewer">Viewer (Read/Collaborate on Shared Documents)</option>
+                    </select>
+                </div>
+
+                <div class="form-field">
+                    <label for="password">Password</label>
+                    <input id="password"
+                           name="password"
+                           type="password"
+                           minlength="12"
+                           autocomplete="new-password"
+                           placeholder="At least 12 characters"
+                           required>
+                </div>
+
+                <div class="form-field">
+                    <label for="confirm_password">Confirm password</label>
+                    <input id="confirm_password"
+                           name="confirm_password"
+                           type="password"
+                           minlength="12"
+                           autocomplete="new-password"
+                           placeholder="Enter your password again"
+                           required>
+                </div>
+
+                <button class="button-primary button-full" type="submit">
+                    Create account <span aria-hidden="true">→</span>
+                </button>
+            </form>
+
+            <p class="auth-footer">
+                Already have an account?
+                <a href="{{ url_for('auth.login') }}">Sign in</a>
+            </p>
+
+            <p class="security-note">
+                <span aria-hidden="true">◆</span>
+                Your account is protected by server-side access controls.
+            </p>
+        </section>
+    </main>
+</body>
+</html>

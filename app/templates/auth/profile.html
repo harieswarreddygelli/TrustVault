@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+
+    <title>My Profile | TrustVault</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/trustvault.css') }}">
+    <script src="{{ url_for('static', filename='js/theme.js') }}" defer></script>
+</head>
+<body>
+    <header class="site-header">
+        <a class="brand-lockup" href="{{ url_for('documents.dashboard') }}">
+            <span class="brand-mark" aria-hidden="true">T</span>
+            <span>TrustVault</span>
+        </a>
+
+        <nav class="site-nav" aria-label="Main navigation">
+            <a href="{{ url_for('documents.dashboard') }}">Dashboard</a>
+            <a href="{{ url_for('documents.index') }}">My Documents</a>
+            <a href="{{ url_for('documents.upload_page') }}">Upload</a>
+            <a href="{{ url_for('documents.shared_documents') }}">Shared Documents</a>
+            <a href="{{ url_for('documents.activity') }}">Activity</a>
+            <a class="active" href="{{ url_for('auth.profile') }}" aria-current="page">Profile</a>
+        </nav>
+
+        <div class="header-actions">
+            <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Toggle color theme">◐</button>
+
+            <form method="post" action="{{ url_for('auth.logout') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="button-secondary">Sign out</button>
+            </form>
+        </div>
+    </header>
+
+    <main class="profile-page">
+        <section class="profile-heading">
+            <span class="eyebrow">ACCOUNT SETTINGS</span>
+            <h1>My Profile</h1>
+            <p class="muted">Review your TrustVault account credentials, update your username or email, and manage security settings.</p>
+        </section>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <section class="flash-messages" aria-label="Notifications">
+                    {% for category, message in messages %}
+                        <p class="flash-message {{ category }}" role="status">{{ message }}</p>
+                    {% endfor %}
+                </section>
+            {% endif %}
+        {% endwith %}
+
+        <section class="panel profile-card">
+            <div class="profile-identity">
+                <div class="profile-identity-main">
+                    <div class="profile-avatar" aria-hidden="true">
+                        {{ user.username[:1]|upper }}
+                    </div>
+
+                    <div class="profile-intro">
+                        <h2>{{ user.username }}</h2>
+                        <p class="muted">{{ user.email }}</p>
+                        <span class="status-pill {{ 'status-active' if user.is_active else 'status-inactive' }}">
+                            {{ "Active account" if user.is_active else "Inactive account" }}
+                        </span>
+                    </div>
+                </div>
+
+                <a class="button-secondary" href="{{ url_for('auth.change_password') }}">
+                    Change Password
+                </a>
+            </div>
+
+            <div class="profile-divider"></div>
+
+            <h3>Account Information</h3>
+
+            <dl class="profile-grid">
+                <div class="profile-item">
+                    <dt>Role</dt>
+                    <dd>{{ user.role|title }}</dd>
+                </div>
+
+                <div class="profile-item">
+                    <dt>Account status</dt>
+                    <dd>{{ "Active" if user.is_active else "Inactive" }}</dd>
+                </div>
+
+                <div class="profile-item">
+                    <dt>Member since</dt>
+                    <dd>{{ user.created_at or "Unknown" }}</dd>
+                </div>
+            </dl>
+
+            <div class="profile-divider"></div>
+
+            <h3>Update Username &amp; Email</h3>
+
+            <form method="post" action="{{ url_for('auth.profile') }}" class="auth-form" style="margin-top: 16px;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div class="form-field">
+                    <label for="username">Username</label>
+                    <input id="username"
+                           name="username"
+                           type="text"
+                           maxlength="80"
+                           value="{{ user.username }}"
+                           required>
+                </div>
+
+                <div class="form-field">
+                    <label for="email">Email address</label>
+                    <input id="email"
+                           name="email"
+                           type="email"
+                           maxlength="255"
+                           value="{{ user.email }}"
+                           required>
+                </div>
+
+                <div class="profile-actions">
+                    <button type="submit" class="button-primary">Save Profile Changes →</button>
+                    <a class="button-secondary" href="{{ url_for('documents.index') }}">My Documents</a>
+                    <a class="button-secondary" href="{{ url_for('documents.dashboard') }}">Back to Dashboard</a>
+                </div>
+            </form>
+        </section>
+    </main>
+</body>
+</html>

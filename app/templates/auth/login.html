@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+
+    <title>Sign In | TrustVault</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/trustvault.css') }}">
+    <script src="{{ url_for('static', filename='js/theme.js') }}" defer></script>
+</head>
+<body>
+    <main class="auth-shell">
+        <section class="auth-card">
+            <a class="brand-lockup" href="{{ url_for('auth.login') }}">
+                <span class="brand-mark" aria-hidden="true">T</span>
+                <span class="brand-copy">
+                    <strong>TrustVault</strong>
+                    <small>Private by design</small>
+                </span>
+            </a>
+
+            <div class="auth-heading">
+                <span class="eyebrow">SECURE DOCUMENT ACCESS</span>
+                <h1>Welcome back.</h1>
+                <p class="muted">Sign in to access your secure document workspace.</p>
+            </div>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="flash-messages" aria-live="polite">
+                        {% for category, message in messages %}
+                            <p class="flash-message {{ category }}" role="alert">{{ message }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+
+            <form method="post"
+                  action="{{ url_for('auth.login', next=request.args.get('next', '')) }}"
+                  class="auth-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div class="form-field">
+                    <label for="username">Username</label>
+                    <input id="username"
+                           name="username"
+                           type="text"
+                           maxlength="80"
+                           autocomplete="username"
+                           placeholder="Enter your username"
+                           value="{{ request.form.get('username', '') }}"
+                           required
+                           autofocus>
+                </div>
+
+                <div class="form-field">
+                    <label for="password">Password</label>
+                    <input id="password"
+                           name="password"
+                           type="password"
+                           autocomplete="current-password"
+                           placeholder="Enter your password"
+                           required>
+                </div>
+
+                <button class="button-primary button-full" type="submit">
+                    Sign in <span aria-hidden="true">→</span>
+                </button>
+            </form>
+
+            <p class="auth-footer">
+                New to TrustVault?
+                <a href="{{ url_for('auth.register') }}">Create an account</a>
+            </p>
+
+            <p class="security-note">
+                <span aria-hidden="true">◆</span>
+                Your documents remain private and access-controlled.
+            </p>
+        </section>
+    </main>
+</body>
+</html>

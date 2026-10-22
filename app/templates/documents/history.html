@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light dark">
+
+    <title>Document History | TrustVault</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/trustvault.css') }}">
+    <script src="{{ url_for('static', filename='js/theme.js') }}" defer></script>
+</head>
+<body>
+    <header class="site-header">
+        <a class="brand-lockup" href="{{ url_for('documents.dashboard') }}">
+            <span class="brand-mark" aria-hidden="true">T</span>
+            <span>TrustVault</span>
+        </a>
+
+        <nav class="site-nav" aria-label="Main navigation">
+            <a href="{{ url_for('documents.dashboard') }}">Dashboard</a>
+            <a class="active" href="{{ url_for('documents.index') }}">My Documents</a>
+            <a href="{{ url_for('documents.upload_page') }}">Upload</a>
+            <a href="{{ url_for('documents.shared_documents') }}">Shared Documents</a>
+            <a href="{{ url_for('documents.activity') }}">Activity</a>
+            <a href="{{ url_for('auth.profile') }}">Profile</a>
+        </nav>
+
+        <div class="header-actions">
+            <button type="button" id="theme-toggle" class="theme-toggle" aria-label="Toggle color theme">◐</button>
+
+            <form method="POST" action="{{ url_for('auth.logout') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="button-secondary">Sign out</button>
+            </form>
+        </div>
+    </header>
+
+    <main class="documents-page">
+        <section class="page-heading">
+            <div>
+                <p class="eyebrow">SECURITY &amp; ACCOUNTABILITY</p>
+                <h1>Document History</h1>
+                <p>Review the recorded audit trail for this document.</p>
+            </div>
+            <a class="button-secondary" href="{{ url_for('documents.index') }}">← Back to Documents</a>
+        </section>
+
+        <section class="document-list">
+            <article class="document-card">
+                <div class="document-card-content">
+                    <div class="document-icon" aria-hidden="true">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                            <path d="M14 2v6h6M8 13h8M8 17h8"/>
+                        </svg>
+                    </div>
+                    <div class="document-details">
+                        <h2>{{ document.title }}</h2>
+                        <p>{{ document.original_filename }}</p>
+                        <p>
+                            Uploaded:
+                            {{ document.created_at.strftime('%d %b %Y, %H:%M') if document.created_at else 'Date unavailable' }}
+                        </p>
+                    </div>
+                </div>
+            </article>
+        </section>
+
+        <section class="history-section">
+            <div class="page-heading">
+                <div>
+                    <h2>Audit Events</h2>
+                    <p>Recorded events for this document, newest first.</p>
+                </div>
+                <span class="status-badge">{{ events|length }} events</span>
+            </div>
+
+            {% if events %}
+                <div class="history-list">
+                    {% for event in events %}
+                        <article class="history-event">
+                            <div class="history-event-marker" aria-hidden="true"></div>
+                            <div class="history-event-content">
+                                <div class="history-event-top">
+                                    <h3>{{ event.action|replace('_', ' ')|title }}</h3>
+                                    <span class="status-badge">{{ event.outcome|title }}</span>
+                                </div>
+
+                                <p>{{ event.details or 'No additional details.' }}</p>
+
+                                <p class="muted-text">
+                                    User ID: {{ event.user_id or 'Unavailable' }}
+                                    · Chain index: {{ event.chain_index }}
+                                </p>
+
+                                <time>
+                                    {{ event.created_at.strftime('%d %b %Y, %H:%M:%S') if event.created_at else 'Time unavailable' }}
+                                </time>
+                            </div>
+                        </article>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty-state">
+                    <div class="empty-state-icon" aria-hidden="true">◷</div>
+                    <h2>No activity recorded</h2>
+                    <p>No audit events were found for this document.</p>
+                </div>
+            {% endif %}
+        </section>
+    </main>
+</body>
+</html>

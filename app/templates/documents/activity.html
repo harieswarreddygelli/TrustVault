@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light dark">
+
+    <title>Activity | TrustVault</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/trustvault.css') }}">
+    <script src="{{ url_for('static', filename='js/theme.js') }}" defer></script>
+</head>
+<body>
+    <header class="site-header">
+        <a class="brand-lockup" href="{{ url_for('documents.dashboard') }}">
+            <span class="brand-mark" aria-hidden="true">T</span>
+            <span>TrustVault</span>
+        </a>
+
+        <nav class="site-nav" aria-label="Main navigation">
+            <a href="{{ url_for('documents.dashboard') }}">Dashboard</a>
+            <a href="{{ url_for('documents.index') }}">My Documents</a>
+            <a href="{{ url_for('documents.upload_page') }}">Upload</a>
+            <a href="{{ url_for('documents.shared_documents') }}">Shared Documents</a>
+            <a class="active" href="{{ url_for('documents.activity') }}" aria-current="page">Activity</a>
+            <a href="{{ url_for('auth.profile') }}">Profile</a>
+        </nav>
+
+        <div class="header-actions">
+            <button type="button" id="theme-toggle" class="theme-toggle" aria-label="Toggle color theme">◐</button>
+            <form method="POST" action="{{ url_for('auth.logout') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="button-secondary">Sign out</button>
+            </form>
+        </div>
+    </header>
+
+    <main class="documents-page">
+        <section class="page-heading">
+            <div>
+                <p class="eyebrow">{{ "ADMINISTRATIVE SECURITY AUDIT" if is_admin else "SECURITY OVERVIEW" }}</p>
+                <h1>{{ "System-Wide Activity, Metrics & Permission Audit" if is_admin else "Recent Activity" }}</h1>
+                <p>
+                    {% if is_admin %}
+                        Administrator view of platform metrics, refused access attempts, permission changes, and the cryptographic audit trail.
+                    {% else %}
+                        Review your recorded actions and cryptographic audit events.
+                    {% endif %}
+                </p>
+            </div>
+            <a class="button-secondary" href="{{ url_for('documents.index') }}">My Documents</a>
+        </section>
+
+        {% if is_admin and admin_metrics %}
+            <section class="profile-grid" style="margin-bottom: 28px;" aria-label="Administrative System Metrics">
+                <div class="panel profile-item">
+                    <dt>Total Registered Users</dt>
+                    <dd>{{ admin_metrics.total_users }}</dd>
+                </div>
+                <div class="panel profile-item">
+                    <dt>Active / Deleted Documents</dt>
+                    <dd>{{ admin_metrics.active_docs }} active · {{ admin_metrics.deleted_docs }} soft-deleted</dd>
+                </div>
+                <div class="panel profile-item">
+                    <dt>Permission Grants</dt>
+                    <dd>{{ admin_metrics.active_grants }} active · {{ admin_metrics.revoked_grants }} revoked</dd>
+                </div>
+                <div class="panel profile-item">
+                    <dt>Refused / Failed Access Attempts</dt>
+                    <dd style="color: var(--danger);">{{ admin_metrics.refused_attempts }} blocked event(s)</dd>
+                </div>
+            </section>
+        {% endif %}
+
+        {% if is_admin %}
+            <section class="history-section" style="margin-bottom: 32px;">
+                <h2>Global Permission Grants &amp; Revocations ({{ permissions_overview|length }})</h2>
+                {% if permissions_overview %}
+                    <ul class="permission-list" style="margin-top: 12px;">
+                        {% for perm in permissions_overview %}
+                            <li class="permission-item">
+                                <div>
+                                    <strong>Document:</strong> {{ perm.document.title if perm.document else perm.document_id }}
+                                    · <strong>Recipient:</strong> {{ perm.user.username if perm.user else perm.user_id }}
+                                    · <strong>Level:</strong> {{ "Edit / Write" if perm.permission in ['write', 'edit'] else perm.permission|title }}
+                                    <p class="muted">
+                                        Granted: {{ perm.granted_at }}
+                                        {% if perm.is_revoked %}
+                                            · Revoked: {{ perm.revoked_at or "Yes" }}
+                                        {% endif %}
+                                    </p>
+                                </div>
+                                <span class="status-badge {{ 'status-inactive' if perm.is_revoked else 'status-active' }}">
+                                    {{ "Revoked" if perm.is_revoked else "Active" }}
+                                </span>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="muted">No permission grants recorded yet.</p>
+                {% endif %}
+            </section>
+        {% endif %}
+
+        <section class="history-section">
+            <h2>{{ "Cryptographic Audit Trail (All Users)" if is_admin else "Your Audit Events" }}</h2>
+            {% if events %}
+                <div class="history-list" style="margin-top: 12px;">
+                    {% for event in events %}
+                        <article class="history-event">
+                            <div class="history-event-marker" aria-hidden="true"></div>
+                            <div class="history-event-content">
+                                <div class="history-event-top">
+                                    <h3>{{ event.action|replace('_', ' ')|title }}</h3>
+                                    <span class="status-badge">{{ event.outcome|title }}</span>
+                                </div>
+
+                                <p>{{ event.details or 'No additional details.' }}</p>
+
+                                <p class="muted-text">
+                                    {% if is_admin %}
+                                        Actor User ID: {{ event.user_id or 'Anonymous' }} ·
+                                    {% endif %}
+                                    {% if event.document_id %}
+                                        Document reference: {{ event.document_id }}
+                                    {% else %}
+                                        Account or security event
+                                    {% endif %}
+                                    · Chain index: {{ event.chain_index }}
+                                </p>
+
+                                <time>
+                                    {{ event.created_at.strftime('%d %b %Y, %H:%M:%S') if event.created_at and event.created_at is not string else (event.created_at or 'Time unavailable') }}
+                                </time>
+                            </div>
+                        </article>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty-state">
+                    <div class="empty-state-icon" aria-hidden="true">◷</div>
+                    <h2>No activity to display</h2>
+                    <p>Recorded security and document events will appear here when available.</p>
+                </div>
+            {% endif %}
+        </section>
+    </main>
+</body>
+</html>

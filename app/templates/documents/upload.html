@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+
+    <title>Upload Documents | TrustVault</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/trustvault.css') }}">
+    <script src="{{ url_for('static', filename='js/theme.js') }}" defer></script>
+</head>
+<body>
+    <header class="site-header">
+        <a class="brand-lockup" href="{{ url_for('documents.dashboard') }}">
+            <span class="brand-mark" aria-hidden="true">T</span>
+            <span>TrustVault</span>
+        </a>
+
+        <nav class="site-nav" aria-label="Main navigation">
+            <a href="{{ url_for('documents.dashboard') }}">Dashboard</a>
+            <a href="{{ url_for('documents.index') }}">My Documents</a>
+            <a class="active" href="{{ url_for('documents.upload_page') }}" aria-current="page">Upload</a>
+            <a href="{{ url_for('documents.shared_documents') }}">Shared Documents</a>
+            <a href="{{ url_for('documents.activity') }}">Activity</a>
+            <a href="{{ url_for('auth.profile') }}">Profile</a>
+        </nav>
+
+        <div class="header-actions">
+            <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Toggle color theme">◐</button>
+
+            <form method="post" action="{{ url_for('auth.logout') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="button-secondary">Sign out</button>
+            </form>
+        </div>
+    </header>
+
+    <main class="upload-page">
+        <section class="upload-page-heading">
+            <span class="eyebrow">SECURE FILE STORAGE</span>
+            <h1>Upload Documents</h1>
+            <p class="muted">Add files to your private TrustVault workspace.</p>
+        </section>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <section class="flash-messages" aria-label="Notifications">
+                    {% for category, message in messages %}
+                        <p class="flash-message {{ category }}" role="status">{{ message }}</p>
+                    {% endfor %}
+                </section>
+            {% endif %}
+        {% endwith %}
+
+        <section class="panel upload-page-card">
+            <div class="upload-heading">
+                <div class="upload-heading-icon" aria-hidden="true">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 16V4"/>
+                        <path d="m7 9 5-5 5 5"/>
+                        <path d="M20 16.5v2A1.5 1.5 0 0 1 18.5 20h-13A1.5 1.5 0 0 1 4 18.5v-2"/>
+                    </svg>
+                </div>
+
+                <div>
+                    <h2>Document details</h2>
+                    <p class="muted">Enter a descriptive title and select one or more files.</p>
+                </div>
+            </div>
+
+            <form class="upload-form"
+                  method="post"
+                  action="{{ url_for('documents.upload') }}"
+                  enctype="multipart/form-data">
+
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div class="upload-field">
+                    <label for="title">Document title</label>
+                    <input id="title"
+                           name="title"
+                           type="text"
+                           maxlength="255"
+                           placeholder="e.g. Q4 Financial Audit Report"
+                           autocomplete="off"
+                           required>
+                    <p class="upload-hint">Use a clear name that helps you recognize the document later.</p>
+                </div>
+
+                <div class="upload-field">
+                    <label for="category">Document category</label>
+                    <select id="category" name="category">
+                        {% for cat in categories or ['General', 'Financial', 'Legal', 'Engineering', 'Regulatory', 'HR'] %}
+                            <option value="{{ cat }}">{{ cat }}</option>
+                        {% endfor %}
+                    </select>
+                    <p class="upload-hint">Categorize the document for easier search and organization.</p>
+                </div>
+
+                <div class="upload-field">
+                    <label for="file">Choose files</label>
+
+                    <label class="upload-file-zone" for="file">
+                        <span class="upload-file-icon" aria-hidden="true">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                <path d="M14 2v6h6"/>
+                                <path d="M12 18v-6"/>
+                                <path d="m9.5 14.5 2.5-2.5 2.5 2.5"/>
+                            </svg>
+                        </span>
+
+                        <span class="upload-file-title">Select files from your device</span>
+                        <span class="upload-file-description">Drag and drop or click to choose multiple files</span>
+                        <span class="upload-file-cta">Browse files</span>
+
+                        <input id="file"
+                               name="file"
+                               type="file"
+                               multiple
+                               required
+                               aria-describedby="file-help">
+                    </label>
+
+                    <p id="file-help" class="upload-hint">
+                        Use Ctrl-click (Cmd-click on Mac) to select individual files or Shift-click to select a range. Maximum batch size: 16 MiB.
+                    </p>
+
+                    <div id="selected-files"
+                         class="selected-files"
+                         aria-live="polite"
+                         aria-relevant="additions text">
+                        <p class="muted">No files selected yet.</p>
+                    </div>
+                </div>
+
+                <div class="upload-footer">
+                    <p class="upload-security-note">
+                        <span aria-hidden="true">◆</span>
+                        Private storage · Server-enforced access &amp; size limits
+                    </p>
+
+                    <button class="upload-submit-button" type="submit">
+                        Upload documents →
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        <footer class="upload-page-footer">
+            <a href="{{ url_for('documents.index') }}">← Back to My Documents</a>
+            <a href="{{ url_for('documents.dashboard') }}">Dashboard</a>
+        </footer>
+    </main>
+
+    <script>
+    (() => {
+        const form = document.querySelector(".upload-form");
+        const input = document.getElementById("file");
+        const preview = document.getElementById("selected-files");
+        const submitButton = form?.querySelector('button[type="submit"]');
+
+        if (!form || !input || !preview || !submitButton) return;
+
+        const MAX_REQUEST_BYTES = 16 * 1024 * 1024;
+        let submitting = false;
+
+        function formatSize(bytes) {
+            if (bytes < 1024) return `${bytes} B`;
+            if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+            return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+        }
+
+        function renderFiles() {
+            preview.replaceChildren();
+
+            const files = Array.from(input.files);
+            const totalBytes = files.reduce((total, file) => total + file.size, 0);
+
+            const summary = document.createElement("p");
+            summary.className = "selected-files-count";
+            summary.textContent = files.length
+                ? `${files.length} file${files.length === 1 ? "" : "s"} selected · ${formatSize(totalBytes)} total`
+                : "No files selected yet.";
+
+            preview.appendChild(summary);
+
+            if (totalBytes >= MAX_REQUEST_BYTES && files.length) {
+                const warning = document.createElement("p");
+                warning.className = "upload-validation-message";
+                warning.setAttribute("role", "alert");
+                warning.textContent =
+                    "The selected files reach or exceed the 16 MiB request limit. " +
+                    "Choose smaller files or upload them in separate batches.";
+                preview.appendChild(warning);
+            }
+
+            files.forEach((file, index) => {
+                const row = document.createElement("div");
+                row.className = "selected-file-row";
+
+                const details = document.createElement("div");
+                details.className = "selected-file-details";
+
+                const name = document.createElement("span");
+                name.className = "selected-file-name";
+                name.textContent = file.name;
+
+                const size = document.createElement("span");
+                size.className = "selected-file-size";
+                size.textContent = formatSize(file.size);
+
+                details.append(name, size);
+
+                const remove = document.createElement("button");
+                remove.type = "button";
+                remove.className = "selected-file-remove";
+                remove.textContent = "Remove";
+                remove.setAttribute("aria-label", `Remove ${file.name}`);
+
+                remove.addEventListener("click", () => {
+                    if (submitting) return;
+
+                    const transfer = new DataTransfer();
+                    Array.from(input.files).forEach((item, itemIndex) => {
+                        if (itemIndex !== index) transfer.items.add(item);
+                    });
+
+                    input.files = transfer.files;
+                    renderFiles();
+                });
+
+                row.append(details, remove);
+                preview.appendChild(row);
+            });
+        }
+
+        input.addEventListener("change", renderFiles);
+
+        form.addEventListener("submit", (event) => {
+            if (submitting) {
+                event.preventDefault();
+                return;
+            }
+
+            const files = Array.from(input.files);
+            const totalBytes = files.reduce((total, file) => total + file.size, 0);
+
+            if (!files.length) {
+                event.preventDefault();
+                input.focus();
+                return;
+            }
+
+            if (totalBytes >= MAX_REQUEST_BYTES) {
+                event.preventDefault();
+                const warning = document.createElement("p");
+                warning.className = "upload-validation-message";
+                warning.setAttribute("role", "alert");
+                warning.textContent =
+                    "Your selected files reach or exceed the 16 MiB request limit. " +
+                    "Remove a file or select a smaller batch.";
+                preview.prepend(warning);
+                return;
+            }
+
+            submitting = true;
+            submitButton.disabled = true;
+            submitButton.textContent = "Uploading…";
+            submitButton.setAttribute("aria-busy", "true");
+        });
+
+        renderFiles();
+    })();
+    </script>
+</body>
+</html>
