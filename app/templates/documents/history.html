@@ -60,7 +60,11 @@
                         <p>{{ document.original_filename }}</p>
                         <p>
                             Uploaded:
-                            {{ document.created_at.strftime('%d %b %Y, %H:%M') if document.created_at else 'Date unavailable' }}
+                            {% if document.created_at and document.created_at is not string and document.created_at.strftime %}
+                                {{ document.created_at.strftime('%d %b %Y, %H:%M') }}
+                            {% else %}
+                                {{ document.created_at or 'Date unavailable' }}
+                            {% endif %}
                         </p>
                     </div>
                 </div>
@@ -95,7 +99,11 @@
                                 </p>
 
                                 <time>
-                                    {{ event.created_at.strftime('%d %b %Y, %H:%M:%S') if event.created_at else 'Time unavailable' }}
+                                    {% if event.created_at and event.created_at is not string and event.created_at.strftime %}
+                                        {{ event.created_at.strftime('%d %b %Y, %H:%M:%S') }}
+                                    {% else %}
+                                        {{ event.created_at or 'Time unavailable' }}
+                                    {% endif %}
                                 </time>
                             </div>
                         </article>
