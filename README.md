@@ -88,7 +88,7 @@ Uploaded files are never placed in `app/static/`. They are written to `instance/
 ### Step-by-Step Setup
 ```bash
 # 1. Clone repository and enter directory
-git clone <YOUR_PUBLIC_REPO_URL>
+git clone https://github.com/harieswarreddygelli/TrustVault.git
 cd TrustVault-main
 
 # 2. Create and activate virtual environment
@@ -115,7 +115,7 @@ python run.py
 ### Running Automated Tests & Audit Chain Verification
 ```bash
 # Run the full automated test suite (SQLite in-memory, no Oracle required)
-pytest -v
+python -m pytest -q 
 
 # Verify the live Oracle SHA-256 audit chain integrity
 python scripts/verify_audit_chain.py
