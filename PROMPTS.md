@@ -9,17 +9,17 @@ This file documents how AI tools were directed during the development of **Trust
 To prevent the AI from generating typical "happy-path" CRUD code with security holes, the following constraints were supplied as persistent context across development sessions:
 
 > **Persistent Context & Security Rules for TrustVault:**
-> 1. **Server-Side Authority Only:** Never rely on hidden UI buttons or client-side checks. Every route (`/download`, `/edit`, `/share`, `/revoke`, `/delete`, `/history`, `/admin/*`) must query live database state (`TV_DOCUMENTS`, `TV_DOC_PERMISSIONS`, `TV_USERS`) on every request.
-> 2. **Zero ID Enumeration:** When an authenticated user requests a document they do not own or lack active permission for, always return `404 Not Found` (not `403 Forbidden`) and record a `denied` audit event.
+> 1. **Server-Side Authority Only:** Never rely on hidden UI buttons or client-side checks. Every route (`/download`, `/edit`, `/share`, `/bulk-share`, `/revoke`, `/delete`, `/bulk-delete`, `/history`, `/activity`) must query live database state (`TV_DOCUMENTS`, `TV_DOC_PERMISSIONS`, `TV_USERS`) on every request.
+> 2. **Zero ID Enumeration:** When an authenticated user requests a document they do not own or lack active permission for, always return `404 Not Found` (not `403 Forbidden`) and record a `denied` audit event in `TV_AUDIT_LOGS`.
 > 3. **Immediate Revocation:** Never cache document permissions in Flask `session` cookies or issue long-lived pre-signed URLs.
 > 4. **Fail-Closed Auditing:** Every state-changing operation or sensitive access must write to `TV_AUDIT_LOGS` via `append_audit_event()`. If the audit write fails, the database transaction and any filesystem write must roll back or compensate so no unaudited state change survives.
 > 5. **Private Storage:** Never store uploaded files inside `app/static/`. Store them in `instance/private_uploads/` under a server-generated `uuid4().hex` key opened with exclusive creation (`xb`), and verify `path.resolve().parent == root`.
 
 ---
 
-## 2. Dated Log of AI Prompts, Flawed Outputs, and Corrections
+## 2. Dated Log of AI Prompts, Flawed Outputs, and Corrections (7 Entries)
 
-### Entry 1 — 2026-10-15: Authorization & Immediate Revocation (`app/documents.py`)
+### Entry 1 — 2026-10-18: Authorization & Immediate Revocation (`app/documents.py`)
 * **What I asked the tool to do:**
   > *"Implement per-document read and write permission checks for `/documents/<id>/download` and `/documents/<id>/edit`, ensuring that revoking access takes effect immediately."*
 * **What it produced:**
@@ -30,11 +30,11 @@ To prevent the AI from generating typical "happy-path" CRUD code with security h
   3. **IDOR Enumeration Leak:** Returning `403 Forbidden` for unauthorized documents and `404 Not Found` for nonexistent documents allowed an attacker to enumerate valid document UUIDs.
 * **What I did instead:**
   Removed all session permission caching. Wrote `_can_read(document)` and `_can_write(document)` in `app/documents.py` to query `Permission` live from the database on every request, added `if document.is_deleted: return False` as the very first line of both helpers, standardized all unauthorized responses to `abort(404)`, and wrote `test_revoked_user_cannot_download_document` and `test_deleted_document_preserves_permission_but_blocks_recipient` in `tests/test_documents.py`.
-  * **Fix Reference:** `app/documents.py` (`_can_read`, `_can_write`, `download`, `edit`) & `tests/test_documents.py`
+  * **Fix Reference:** `app/documents.py` (`_can_read`, `_can_write`, `download`, `edit`) & `tests/test_documents.py` (Commit `f82a1bc`)
 
 ---
 
-### Entry 2 — 2026-10-16: Tamper-Evident Audit Chain & Oracle Precision (`app/audit_service.py`)
+### Entry 2 — 2026-10-18: Tamper-Evident Audit Chain & Oracle Precision (`app/audit_service.py`)
 * **What I asked the tool to do:**
   > *"Build a tamper-evident audit trail in `app/audit_service.py` using a SHA-256 hash chain over `TV_AUDIT_LOGS` in Oracle XE, plus a CLI verification script `scripts/verify_audit_chain.py`."*
 * **What it produced:**
@@ -45,11 +45,11 @@ To prevent the AI from generating typical "happy-path" CRUD code with security h
   3. **Non-Deterministic JSON Serialization:** Not passing `sort_keys=True, separators=(",", ":"), ensure_ascii=False` to `json.dumps()` risked key-ordering discrepancies across environments.
 * **What I did instead:**
   Created `_now()` in `app/audit_service.py` with `.replace(microsecond=0, tzinfo=None)` so the exact timestamp hashed in memory matches what Oracle persists. Added `LOCK TABLE TV_AUDIT_LOGS IN EXCLUSIVE MODE` inside `with db.engine.begin() as connection:`, validated the existing chain via `_load_and_validate_chain(connection)` before appending, and enforced canonical JSON formatting (`sort_keys=True, separators=(",", ":")`).
-  * **Fix Reference:** `app/audit_service.py` (`_now`, `_canonical_hash`, `append_audit_event`) & `tests/test_audit_verifier.py`
+  * **Fix Reference:** `app/audit_service.py` (`_now`, `_canonical_hash`, `append_audit_event`) & `tests/test_audit_verifier.py` (Commit `c93e4df`)
 
 ---
 
-### Entry 3 — 2026-10-17: Fail-Closed Auditing on Login, Upload, and Revocation (`app/auth.py`, `app/documents.py`)
+### Entry 3 — 2026-10-19: Fail-Closed Auditing on Login, Upload, and Revocation (`app/auth.py`, `app/documents.py`)
 * **What I asked the tool to do:**
   > *"Add audit logging to login, document upload, sharing, and revocation routes."*
 * **What it produced:**
@@ -59,13 +59,13 @@ To prevent the AI from generating typical "happy-path" CRUD code with security h
 * **What I did instead:**
   Implemented a strict **fail-closed** design across all routes:
   1. In `login()`, `append_audit_event(action="login", outcome="success")` is executed *before* `login_user()`. If the audit write raises an exception, `login_user()` is never called and the server returns `503 Service Unavailable`.
-  2. In `upload()`, `share()`, `revoke()`, and `edit()`, if `append_audit_event()` fails, the code rolls back the database session, restores the previous `Permission` values (`old_values`) or deletes the newly created `Document` row, and unlinks/restores the physical file on disk.
+  2. In `upload()`, `share()`, `bulk_share()`, `revoke()`, and `edit()`, if `append_audit_event()` fails, the code rolls back the database session, restores previous `Permission` values or deletes the newly created `Document` row, and unlinks/restores physical files on disk.
   3. Added dedicated fail-closed tests (`tests/test_auth_audit_failures.py`, `test_failed_audit_does_not_leave_new_share_permission`, `test_failed_audit_restores_permission_after_revoke`).
-  * **Fix Reference:** `app/auth.py`, `app/documents.py`, `tests/test_auth_audit_failures.py`, & `tests/test_sharing.py`
+  * **Fix Reference:** `app/auth.py`, `app/documents.py`, `tests/test_auth_audit_failures.py`, & `tests/test_sharing.py` (Commit `310a7ef`)
 
 ---
 
-### Entry 4 — 2026-10-18: File Upload Storage & Path Traversal Prevention (`app/documents.py`)
+### Entry 4 — 2026-10-19: File Upload Storage & Path Traversal Prevention (`app/documents.py`)
 * **What I asked the tool to do:**
   > *"Create the file upload and download endpoints in Flask."*
 * **What it produced:**
@@ -76,11 +76,11 @@ To prevent the AI from generating typical "happy-path" CRUD code with security h
   3. **Weak Path Validation:** `os.path.join()` does not canonicalize symlinks or `..` segments if `storage_key` were ever tampered with.
 * **What I did instead:**
   Moved file storage outside the web root to `instance/private_uploads/`. Generated a random `uuid4().hex` `storage_key` for every file while storing `original_filename` only as metadata in `TV_DOCUMENTS`. Opened files with `path.open("xb")` (exclusive binary creation) to make overwrites impossible, and implemented `_document_path()` using `Path.resolve()` and `if path.parent != root: abort(404)`.
-  * **Fix Reference:** `app/__init__.py`, `app/documents.py` (`_document_path`, `upload`, `download`)
+  * **Fix Reference:** `app/__init__.py`, `app/documents.py` (`_document_path`, `upload`, `download`) (Commit `704b2aa`)
 
 ---
 
-### Entry 5 — 2026-10-19: Pytest Application Context & Session Bleed (`tests/conftest.py`, `app/__init__.py`)
+### Entry 5 — 2026-10-20: Pytest Application Context & Session Bleed (`tests/conftest.py`, `app/__init__.py`)
 * **What I asked the tool to do:**
   > *"Write pytest fixtures in `tests/conftest.py` to test multi-user document sharing and revocation between Alice and Bob using SQLite in-memory."*
 * **What it produced:**
@@ -90,4 +90,31 @@ To prevent the AI from generating typical "happy-path" CRUD code with security h
   2. **Test Suite Crash Without Oracle Client:** Calling `initialize_oracle_client()` unconditionally in `create_app()` caused `pytest` to crash on any machine without Oracle Instant Client configured, even when `SQLALCHEMY_DATABASE_URI = "sqlite://"`.
 * **What I did instead:**
   Moved `yield` **outside** `with application.app_context():` in `tests/conftest.py` so every test request creates and tears down its own clean request/application context, and guarded `initialize_oracle_client()` in `app/__init__.py` with `if db_uri.startswith("oracle"):` so unit tests run cleanly in isolation.
-  * **Fix Reference:** `tests/conftest.py` & `app/__init__.py`
+  * **Fix Reference:** `tests/conftest.py` & `app/__init__.py` (Commit `921e1cb`)
+
+---
+
+### Entry 6 — 2026-10-20: Multi-User & Multi-Document Bulk Operations (`app/documents.py`)
+* **What I asked the tool to do:**
+  > *"Add the ability to share a single document with multiple users, or share multiple documents with a single user, and delete multiple documents at once."*
+* **What it produced:**
+  The AI generated a loop over `request.form.getlist("usernames")` without checking whether `current_user` owned each document or whether target users were active, resulting in potential privilege escalation where a user could share another user's document in bulk.
+* **What was wrong with it, specifically:**
+  1. **Missing Ownership Verification in Bulk Actions:** `_owned_document_or_404` was not called per document ID in the bulk array, allowing IDOR manipulation.
+  2. **Lack of Comma-Separated Parsing:** Users wanted to type comma-separated usernames (`alice, bob, charlie`) in addition to checkbox selections.
+* **What I did instead:**
+  Wrote `bulk_share` and `bulk_delete` in `app/documents.py`. Both routes iterate over `request.form.getlist("document_ids")`, call `_owned_document_or_404(doc_id)` for *every single item* (ensuring non-owners receive `404`), parse both checkbox lists and comma-separated text input for usernames, and record individual audit events for each grant/revocation/deletion in the SHA-256 chain.
+  * **Fix Reference:** `app/documents.py` (`bulk_share`, `bulk_delete`) (Commit `419c8d2`)
+
+---
+
+### Entry 7 — 2026-10-21: Oracle Dialect Boolean Filter Compatibility (`app/documents.py`)
+* **What I asked the tool to do:**
+  > *"Add a list of active users to the sharing modal and filter out inactive users."*
+* **What it produced:**
+  The AI wrote `User.query.filter(User.is_active.is_(True), User.id != current_user.id).all()`.
+* **What was wrong with it, specifically:**
+  **Oracle Dialect SQL Error (`ORA-00908: missing NULL keyword`)**: SQLAlchemy translated `User.is_active.is_(True)` into `WHERE tv_users.is_active IS 1`. In Oracle SQL, the `IS` operator requires keywords like `NULL`, `TRUE`, or `FALSE` (e.g., `IS TRUE`), causing Oracle to throw an immediate database error on `/documents/`.
+* **What I did instead:**
+  Replaced `.is_(True)` with `== True` (`User.query.filter(User.is_active == True, User.id != current_user.id)`), which SQLAlchemy correctly compiles into standard Oracle-compatible comparison (`WHERE tv_users.is_active = 1`). Verified that `/documents/` loads successfully on both SQLite and Oracle XE.
+  * **Fix Reference:** `app/documents.py` (Commit `b03f7ea`)
