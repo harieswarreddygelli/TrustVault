@@ -1,7 +1,7 @@
 # TrustVault — Secure Document Sharing with a Cryptographic Audit Trail
 
-**Live Deployed URL:** `https://trustvault-prod.onrender.com`  
-**Demo Video:** `https://www.youtube.com/watch?v=trustvault-demo-placeholder`
+**Live Deployed URL:** `https://trustvault-23ma.onrender.com/login`    
+**Demo Video:** ``
 
 TrustVault is an enterprise-grade, security-first document management and auditing platform built with **Flask**, **SQLAlchemy**, and **Oracle Database XE** (with zero-config SQLite local development support and isolated in-memory testing). It is engineered around three non-negotiable guarantees:
 1. **Server-Side Authorization Enforcement:** A document is reachable only by its owner or someone with an active, unrevoked grant. Unauthorized requests across any route return `404 Not Found` and log a `denied` audit event.
