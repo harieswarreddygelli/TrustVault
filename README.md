@@ -132,29 +132,27 @@ shared extensions, models, templates, static assets, utility scripts and
 tests.
 
 ``` text
-TrustVault/
-├── .env.example
-├── .gitignore
-├── Procfile
-├── render.yaml
-├── requirements.txt
-├── run.py
-├── config.py
-├── README.md
-├── THREATS.md
-├── PROMPTS.md
-├── app/
-│   ├── __init__.py
-│   ├── extensions.py
-│   ├── models.py
-│   ├── auth.py
-│   ├── documents.py
-│   ├── static/
-│   └── templates/
-├── scripts/
-│   ├── init_db.py
-│   └── verify_audit_chain.py
-└── tests/
+TrustVault-main/
+├── .env.example                # Template for environment variables
+├── .gitignore                  # Excludes .env, .venv, instance/, and caches
+├── Procfile                    # Production Gunicorn process configuration
+├── render.yaml                 # Render cloud deployment blueprint
+├── requirements.txt            # Python dependencies (Flask, SQLAlchemy, oracledb, pytest)
+├── run.py                      # Production WSGI / development entry point
+├── config.py                   # Environment configuration & SQLite/Oracle fallback
+├── README.md                   # Project documentation & setup guide
+├── THREATS.md                  # Comprehensive STRIDE threat model & accepted risks
+├── PROMPTS.md                  # AI collaboration logs, hallucinations caught & corrections
+├── app/                        # Main Flask application package
+│   ├── __init__.py             # App factory, security headers & automated seeding
+│   ├── extensions.py           # SQLAlchemy, LoginManager & CSRFProtect instances
+│   ├── models.py               # Database schemas (User, Document, Permission, AuditLog)
+│   ├── auth.py                 # Authentication controllers (login, register, logout, profile)
+│   ├── documents.py            # Document lifecycle, search, bulk actions & RBAC
+│   ├── static/                 # Frontend assets (Frosted Glass UI & theme manager)
+│   └── templates/              # Server-rendered responsive Jinja2 templates
+├── scripts/                    # Database initialization & SHA-256 chain verification utils
+└── tests/                      # Automated test suite (comprehensive test cases)
 ```
 
 > This is a high-level view. Confirm filenames against the current
