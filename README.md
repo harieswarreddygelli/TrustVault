@@ -7,7 +7,8 @@
 > audit logging.**
 
 [![Live
-Demo](https://img.shields.io/badge/Live%20Demo-Render-4A90E2?logo=render&logoColor=white)](https://trustvault-23ma.onrender.com/login)     [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+Demo](https://img.shields.io/badge/Live%20Demo-Render-4A90E2?logo=render&logoColor=white)](https://trustvault-23ma.onrender.com/login)     
+[![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Backend-Flask-black?logo=flask)](https://flask.palletsprojects.com/)
 [![Database](https://img.shields.io/badge/Database-Oracle%20%7C%20SQLite-F80000?logo=oracle&logoColor=white)](https://www.oracle.com/database/)
 
@@ -203,6 +204,7 @@ TrustVault uses account roles alongside document-level permissions.
                                       account, subject to the granted
                                       permission. Upload access is
                                       restricted by role.
+                                      
   -----------------------------------------------------------------------
 
 Document-level permissions:
@@ -233,6 +235,7 @@ public TrustVault demo and never reuse these passwords elsewhere.
   Document owner    `alice`           `alice@trustvault.local`   `TestPassword123!`
 
   Collaborator      `bob`             `bob@trustvault.local`     `TestPassword456!`
+  
   -----------------------------------------------------------------------------------
 
 > **Demo environment notice:** The application may recreate seeded demo
@@ -310,6 +313,7 @@ this as a complete API specification.
 
   `GET /documents/activity`             Authenticated; scope    View the activity feed.
                                         depends on role         
+                                        
   -------------------------------------------------------------------------------------
 
 State-changing requests should use appropriate HTTP methods and CSRF
@@ -455,6 +459,7 @@ certified.
   Automated tests         Check the behaviours    Do not prove the
                           covered by the test     absence of all
                           suite.                  vulnerabilities.
+                          
   -----------------------------------------------------------------------
 
 ### Known areas for future hardening
@@ -649,13 +654,4 @@ GitHub: [@harieswarreddygelli](https://github.com/harieswarreddygelli)
 
 *Built to explore secure file handling, server-side authorization,
 permission lifecycle management and tamper-evident audit logging.*
-
-
-
-
-
-
-
-
-
 
