@@ -355,6 +355,9 @@ chain entries. This is database-specific and may affect write
 throughput. Confirm the exact transaction scope and locking behaviour in
 the current code.
 
+
+
+
 **Verification:** The CLI verifier recomputes hashes and checks the
 previous-hash links. A mismatch indicates that the stored chain is
 inconsistent with the verifier's calculation.
